@@ -454,7 +454,7 @@
     <repositories>
         <repository>
             <id>gitlab-maven-repo</id>
-            <url>https://gitlab.switch.ch/api/v4/projects/5639/packages/maven</url>
+            <url>https://gitlab.switch.ch/api/v4/projects/5589/packages/maven</url>
         </repository>
         <repository>
             <id>gitlab-maven-repo-vsk-loggerinterface</id>
@@ -466,14 +466,14 @@
         </repository>    
         <repository>
             <id>gitlab-maven-repo-vsk-stringpersistor</id>
-            <url>https://gitlab.switch.ch/api/v4/projects/5638/packages/maven</url>
+            <url>https://gitlab.switch.ch/api/v4/projects/5590/packages/maven</url>
             <snapshots>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
             </snapshots>
         </repository>    
         <repository>
-            <id>gitlab-maven-vsk-g08-stringpersistor-api</id>
+            <id>gitlab-maven-vsk-stringpersistor-api</id>
             <url>https://gitlab.com/api/v4/projects/38313718/packages/maven</url>
         </repository>
     </repositories>
