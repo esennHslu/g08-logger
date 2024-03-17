@@ -3,9 +3,11 @@ package ch.hslu.vsk.logger.server;
 import ch.hslu.vsk.logger.common.LogMessage;
 import ch.hslu.vsk.logger.common.SocketConnection;
 
+import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * The {@code LoggerServer} class encapsulates a simple TCP server that listens for log messages
@@ -34,15 +36,28 @@ public class LoggerServer {
     public void start() {
         System.out.println("Server started, waiting for connections...");
 
-        while (true) {
-            try (Socket clientSocket = serverSocket.accept();
-                 ObjectInputStream inputStream = new ObjectInputStream(clientSocket.getInputStream())) {
+        try (Socket clientSocket = serverSocket.accept()) {
 
-                LogMessage message = (LogMessage) inputStream.readObject();
-                System.out.println("Received log: " + message.getMessage());
+            try (ObjectInputStream inputStream = new ObjectInputStream(clientSocket.getInputStream())) {
+
+                while (true) {
+                    LogMessage message = (LogMessage) inputStream.readObject();
+                    System.out.println("Received log: " + message.getMessage());
+                }
+
+            } catch (EOFException e) {
+                System.out.println("Client closed the connection");
+            } catch (SocketException e) {
+                System.out.println("SocketException: Possible client forceful termination or network issue. Message: "
+                        + e.getMessage());
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
