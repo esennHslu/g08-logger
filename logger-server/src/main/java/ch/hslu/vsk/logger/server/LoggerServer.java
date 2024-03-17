@@ -1,7 +1,7 @@
 package ch.hslu.vsk.logger.server;
 
-import ch.hslu.vsk.logger.common.LogMessage;
 import ch.hslu.vsk.logger.common.SocketConnection;
+import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 
 import java.io.EOFException;
 import java.io.ObjectInputStream;
@@ -37,14 +37,14 @@ public class LoggerServer {
         System.out.println("Server started, waiting for connections...");
 
         try (Socket clientSocket = serverSocket.accept()) {
-
             try (ObjectInputStream inputStream = new ObjectInputStream(clientSocket.getInputStream())) {
-
                 while (true) {
-                    LogMessage message = (LogMessage) inputStream.readObject();
-                    System.out.println("Received log: " + message.getMessage());
+                    LogMessageDo messageDo = (LogMessageDo) inputStream.readObject();
+                    System.out.printf("[%s][%s] - %s%n",
+                            messageDo.getSource(),
+                            messageDo.getCreatedAt(),
+                            messageDo.getMessage());
                 }
-
             } catch (EOFException e) {
                 System.out.println("Client closed the connection");
             } catch (SocketException e) {
@@ -53,7 +53,6 @@ public class LoggerServer {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
