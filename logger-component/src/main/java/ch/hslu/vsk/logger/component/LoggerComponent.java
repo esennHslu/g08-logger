@@ -1,16 +1,19 @@
 package ch.hslu.vsk.logger.component;
 
-import ch.hslu.vsk.logger.common.LogMessage;
-import ch.hslu.vsk.logger.common.LogMessageFactory;
 import ch.hslu.vsk.logger.common.SocketConnection;
+import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.time.Instant;
 
 /**
  * Represents a component responsible for logging messages by sending them over a socket connection.
  */
 public class LoggerComponent {
+    // TODO: replace with dedicated management / configuration for the source name
+    private static final String TEST_APP_SOURCE = "demo-app";
+
     private final Socket socket;
     private final ObjectOutputStream outputStream;
 
@@ -31,8 +34,14 @@ public class LoggerComponent {
      * @throws Exception if an error occurs while sending the log message
      */
     public void sendLog(final String message) throws Exception {
-        LogMessage logMessage = LogMessageFactory.createLogMessage(message);
-        outputStream.writeObject(logMessage);
+        Instant timestamp = Instant.now(); // TODO: move to logger implementation (as soon as implemented)
+
+        LogMessageDo messageDo = new LogMessageDo.Builder(message)
+                .from(TEST_APP_SOURCE)
+                .at(timestamp)
+                .build();
+
+        outputStream.writeObject(messageDo);
         outputStream.flush();
     }
 
