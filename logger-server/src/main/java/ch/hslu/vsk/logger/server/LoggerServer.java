@@ -1,6 +1,5 @@
 package ch.hslu.vsk.logger.server;
 
-import ch.hslu.vsk.logger.common.SocketConnection;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
@@ -21,18 +20,30 @@ import java.time.Instant;
  */
 public class LoggerServer {
     private final ServerSocket serverSocket;
-    private final StringPersistor stringPersistor;
+    private final StringPersistor stringPersistor = new FileStringPersistor();
+    private final ConfigReader config = new ConfigReader();
 
     /**
      * Constructs a new {@code LoggerServer} that listens on the specified port.
      *
-     * @param port The port number on which the server will listen for incoming connections.
      * @throws Exception If an I/O error occurs when opening the socket.
      */
-    public LoggerServer(final int port) throws Exception {
-        serverSocket = new ServerSocket(port);
-        stringPersistor = new FileStringPersistor();
-        stringPersistor.setFile(Path.of("Logs", "Logfile.txt"));
+    public LoggerServer() throws Exception {
+        serverSocket = new ServerSocket(config.getSocketPort());
+        stringPersistor.setFile(this.getLogfilePath());
+    }
+
+    /**
+     * Calculates the path depending if the config contains absolute or relative path.
+     * Mainly used during development can be removed once dockerization is finished (always absolute path).
+     * @return Path to logfile.
+     */
+    private Path getLogfilePath() {
+        var logPath = Path.of(config.getLogFilePath());
+        if (logPath.isAbsolute()) {
+            return logPath;
+        }
+        return Path.of(System.getProperty("user.dir"), logPath.toString());
     }
 
     /**
@@ -79,7 +90,7 @@ public class LoggerServer {
      * @throws Exception If an error occurs starting the server.
      */
     public static void main(final String[] args) throws Exception {
-        LoggerServer server = new LoggerServer(SocketConnection.SOCKET_PORT);
+        LoggerServer server = new LoggerServer();
         server.start();
     }
 }

@@ -16,7 +16,7 @@
 package ch.hslu.vsk.logger.common;
 
 /**
- * Testcases for {@code LogMessageFactory}
+ * Testcases for {@code LogMessageFactory}.
  */
 final class LogMessageFactoryTest {
 

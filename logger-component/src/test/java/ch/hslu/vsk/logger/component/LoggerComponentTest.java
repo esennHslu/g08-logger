@@ -16,7 +16,7 @@
 package ch.hslu.vsk.logger.component;
 
 /**
- * Testcases for {@code LoggerComponent}
+ * Testcases for {@code LoggerComponent}.
  */
 final class LoggerComponentTest {
 
