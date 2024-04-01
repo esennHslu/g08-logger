@@ -2,12 +2,16 @@ package ch.hslu.vsk.logger.server;
 
 import ch.hslu.vsk.logger.common.SocketConnection;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
+import ch.hslu.vsk.stringpersistor.FileStringPersistor;
+import ch.hslu.vsk.stringpersistor.api.StringPersistor;
 
 import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.file.Path;
+import java.time.Instant;
 
 /**
  * The {@code LoggerServer} class encapsulates a simple TCP server that listens for log messages
@@ -17,6 +21,7 @@ import java.net.SocketException;
  */
 public class LoggerServer {
     private final ServerSocket serverSocket;
+    private final StringPersistor stringPersistor;
 
     /**
      * Constructs a new {@code LoggerServer} that listens on the specified port.
@@ -26,6 +31,8 @@ public class LoggerServer {
      */
     public LoggerServer(final int port) throws Exception {
         serverSocket = new ServerSocket(port);
+        stringPersistor = new FileStringPersistor();
+        stringPersistor.setFile(Path.of("Logs", "Logfile.txt"));
     }
 
     /**
@@ -33,6 +40,7 @@ public class LoggerServer {
      * For each connection, it reads a {@code LogMessage} object and prints its message to the console.
      * This method demonstrates handling of client socket connections and object input streams.
      */
+    @SuppressWarnings("InfiniteLoopStatement")
     public void start() {
         System.out.println("Server started, waiting for connections...");
 
@@ -40,10 +48,7 @@ public class LoggerServer {
             try (ObjectInputStream inputStream = new ObjectInputStream(clientSocket.getInputStream())) {
                 while (true) {
                     LogMessageDo messageDo = (LogMessageDo) inputStream.readObject();
-                    System.out.printf("[%s][%s] - %s%n",
-                            messageDo.getSource(),
-                            messageDo.getCreatedAt(),
-                            messageDo.getMessage());
+                    this.logMessage(messageDo);
                 }
             } catch (EOFException e) {
                 System.out.println("Client closed the connection");
@@ -58,6 +63,11 @@ public class LoggerServer {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void logMessage(final LogMessageDo messageDo) {
+        var msg = String.format("[%s, %s]: %s", messageDo.getSource(), messageDo.getCreatedAt(), messageDo.getMessage());
+        stringPersistor.save(Instant.now(), msg);
     }
 
     /**
