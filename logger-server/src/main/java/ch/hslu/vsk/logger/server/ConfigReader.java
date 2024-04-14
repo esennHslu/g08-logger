@@ -6,7 +6,7 @@ import java.io.InputStream;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 
-public class ConfigReader {
+public final class ConfigReader {
 
     private final Properties properties;
 
@@ -22,19 +22,19 @@ public class ConfigReader {
         }
     }
 
-    public final String getLogFilePath() {
+    public String getLogFilePath() {
         return properties.getProperty("LOGFILE_PATH");
     }
 
-    public final Integer getSocketPort() {
+    public Integer getSocketPort() {
         return Integer.valueOf(properties.getProperty("SOCKET_PORT"));
     }
 
-    public final String getSocketAddress() {
+    public String getSocketAddress() {
         return properties.getProperty("SOCKET_ADDRESS");
     }
 
-    public final String getCustomSetting(final String settingName) {
+    public String getCustomSetting(final String settingName) {
         if (properties.containsKey(settingName)) {
             return properties.getProperty(settingName);
         }

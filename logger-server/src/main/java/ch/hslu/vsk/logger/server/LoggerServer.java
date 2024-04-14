@@ -30,7 +30,7 @@ public class LoggerServer {
      * @throws Exception If an I/O error occurs when opening the socket.
      */
     public LoggerServer() throws Exception {
-        serverSocket = new ServerSocket(config.getSocketPort(),0, InetAddress.getByName(config.getSocketAddress()));
+        serverSocket = new ServerSocket(config.getSocketPort(), 0, InetAddress.getByName(config.getSocketAddress()));
         stringPersistor.setFile(this.getLogfilePath());
     }
 
@@ -78,7 +78,11 @@ public class LoggerServer {
     }
 
     private void logMessage(final LogMessageDo messageDo) {
-        var msg = String.format("[%s, %s]: %s", messageDo.getSource(), messageDo.getCreatedAt(), messageDo.getMessage());
+        var msg = String.format("[%s | %s, %s]: %s",
+                messageDo.getLevel(),
+                messageDo.getSource(),
+                messageDo.getCreatedAt(),
+                messageDo.getMessage());
         stringPersistor.save(Instant.now(), msg);
         System.out.println(msg);
     }
