@@ -3,7 +3,6 @@ package ch.hslu.vsk.logger.component;
 import ch.hslu.vsk.logger.api.LogLevel;
 import ch.hslu.vsk.logger.api.Logger;
 import ch.hslu.vsk.logger.api.LoggerSetup;
-import ch.hslu.vsk.logger.api.LoggerSetupBuilder;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 
 import java.io.IOException;
@@ -33,12 +32,12 @@ public class LoggerClient implements LoggerSetup {
     private LogLevel minLogLevel;
     private final String source;
 
-    protected LoggerClient(final Builder builder) {
+    protected LoggerClient(final LoggerClientBuilder builder) {
 
-        this.minLogLevel = builder.minLogLevel;
-        this.source = builder.source;
-        Path fallbackFile = builder.fallbackFile; //TODO: Use this when implementing fallback
-        URI targetServerAddress = builder.targetServerAddress;
+        this.minLogLevel = builder.getMinLogLevel();
+        this.source = builder.getSource();
+        Path fallbackFile = builder.getFallbackFile(); //TODO: Use this when implementing fallback
+        URI targetServerAddress = builder.getTargetServerAddress();
 
         try {
             @SuppressWarnings("resource")
@@ -104,84 +103,6 @@ public class LoggerClient implements LoggerSetup {
         } catch (IOException ioException) {
             // TODO: Log to fallback
             System.out.println(ioException.getMessage());
-        }
-    }
-
-    /**
-     * Builder for {@code LoggerClient}. It allows for configuring the {@code LoggerClient} instance
-     * with a fluent interface.
-     * <br />
-     * Example usage:
-     * <pre>
-     * LoggerClient client = new LoggerClient.Builder()
-     *                          .minLogLevel(LogLevel.DEBUG)
-     *                          .targetServer("http://example.com")
-     *                          .build();
-     * </pre>
-     */
-    public static class Builder implements LoggerSetupBuilder {
-
-        private LogLevel minLogLevel;
-        private String source;
-        private Path fallbackFile;
-        private URI targetServerAddress;
-
-        /**
-         * Sets the minimum log level for the logger client.
-         * Messages with a lower log level will not be sent to the target server.
-         *
-         * @param logLevel the minimum {@code LogLevel} to be logged
-         * @return the builder instance for chaining
-         */
-        @Override
-        public LoggerSetupBuilder requires(final LogLevel logLevel) {
-            this.minLogLevel = logLevel;
-            return this;
-        }
-
-        /**
-         * Sets the source that logs.
-         *
-         * @param s Name of the client creating logs
-         * @return the builder instance for chaining
-         */
-        @Override
-        public LoggerSetupBuilder from(final String s) {
-            this.source = s;
-            return this;
-        }
-
-        /**
-         * Sets the fallback path on the LoggerClient.
-         * @param path Path of the fallback file.
-         * @return the builder instance for chaining
-         */
-        @Override
-        public LoggerSetupBuilder usesAsFallback(final Path path) {
-            this.fallbackFile = path;
-            return this;
-        }
-
-        /**
-         * Sets the target server URL where log messages will be sent.
-         *
-         * @param uri the address to the logging server.
-         * @return the builder instance for chaining
-         */
-        @Override
-        public LoggerSetupBuilder targetsServer(final URI uri) {
-            this.targetServerAddress = uri;
-            return this;
-        }
-
-        /**
-         * Constructs the {@code LoggerClient} with the configured settings.
-         *
-         * @return the configured {@code LoggerClient} instance
-         */
-        @Override
-        public LoggerSetup build() {
-            return new LoggerClient(this);
         }
     }
 }
