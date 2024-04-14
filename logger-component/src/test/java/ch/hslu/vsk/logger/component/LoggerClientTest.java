@@ -13,7 +13,7 @@ final class LoggerClientTest {
     @Test
     public void testSettingMinLogLevelDebug() {
         LogLevel expectedLevel = LogLevel.Debug;
-        LoggerSetup client = new LoggerClient.Builder()
+        LoggerSetup client = new LoggerClientBuilder()
                 .requires(LogLevel.Debug)
                 .targetsServer(URI.create("http://localhost:9999"))
                 .build();
@@ -24,7 +24,7 @@ final class LoggerClientTest {
     @Test
     public void testSettingMinLogLevelInfo() {
         LogLevel expectedLevel = LogLevel.Info;
-        LoggerSetup client = new LoggerClient.Builder()
+        LoggerSetup client = new LoggerClientBuilder()
                 .requires(LogLevel.Info)
                 .targetsServer(URI.create("http://localhost:9999"))
                 .build();
@@ -35,7 +35,7 @@ final class LoggerClientTest {
     @Test
     public void testSettingMinLogLevelWarning() {
         LogLevel expectedLevel = LogLevel.Warning;
-        LoggerSetup client = new LoggerClient.Builder()
+        LoggerSetup client = new LoggerClientBuilder()
                 .requires(LogLevel.Warning)
                 .targetsServer(URI.create("http://localhost:9999"))
                 .build();
@@ -46,7 +46,7 @@ final class LoggerClientTest {
     @Test
     public void testSettingMinLogLevelError() {
         LogLevel expectedLevel = LogLevel.Error;
-        LoggerSetup client = new LoggerClient.Builder()
+        LoggerSetup client = new LoggerClientBuilder()
                 .requires(LogLevel.Error)
                 .targetsServer(URI.create("http://localhost:9999"))
                 .build();
@@ -57,7 +57,7 @@ final class LoggerClientTest {
     @Test
     public void testNotSettingTargetServerThrowingException() {
         assertThrows(NullPointerException.class, () -> {
-            new LoggerClient.Builder()
+            new LoggerClientBuilder()
                     .requires(LogLevel.Info)
                     .build();
         }, "Expected NullPointerException when targetServer not set");
