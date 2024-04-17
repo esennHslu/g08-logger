@@ -20,7 +20,7 @@
 
     <groupId>ch.hslu.vsk24fs.g08</groupId>
     <artifactId>g08-logger</artifactId>
-    <version>1.0.0</version>
+    <version>2.0.0</version>
     <packaging>pom</packaging>
 
     <name>g08-logger</name>
@@ -91,6 +91,7 @@
         <mavenChangesPlugin.version>2.12.1</mavenChangesPlugin.version>
         <mavenChangelogPlugin.version>2.3</mavenChangelogPlugin.version>
         <mavenCheckstylePlugin.version>3.3.1</mavenCheckstylePlugin.version>
+        <mavenShadePlugin.version>3.5.2</mavenShadePlugin.version>
         <mavenFailsafePlugin.version>${mavenSurefirePlugin.version}</mavenFailsafePlugin.version>
         <mavenJavadocPlugin.version>3.6.3</mavenJavadocPlugin.version>
         <mavenJxrPlugin.version>3.3.2</mavenJxrPlugin.version>
@@ -117,7 +118,7 @@
             <dependency>
                 <groupId>ch.hslu.vsk24fs.g08</groupId>
                 <artifactId>g08-stringpersistor</artifactId>
-                <version>1.0.0</version>
+                <version>2.0.0</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>

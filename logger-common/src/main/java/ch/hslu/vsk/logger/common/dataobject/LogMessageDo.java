@@ -5,6 +5,8 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 
+import ch.hslu.vsk.logger.api.LogLevel;
+
 /**
  * Immutable POJO holding all fields of a log message during transmission from logger-component to logger-server.
  * <br />
@@ -13,6 +15,7 @@ import java.util.Objects;
  * LogMessageDo log = new LogMessageDo.Builder("this is a message")
  *                 .from("test-system")
  *                 .at(Instant.now())
+ *                 .level(LogLevel.INFO)
  *                 .build();
  * </pre>
  */
@@ -22,21 +25,29 @@ public final class LogMessageDo implements Serializable {
     private final String source;
     private final String message;
     private final Instant createdAt;
+    private final LogLevel level;
 
     private LogMessageDo(final Builder builder) {
         this.source = builder.source;
         this.message = builder.message;
         this.createdAt = builder.timestamp;
+        this.level = builder.level;
     }
 
     public String getSource() {
         return source;
     }
+
     public String getMessage() {
         return message;
     }
+
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public LogLevel getLevel() {
+        return level;
     }
 
     @Override
@@ -51,12 +62,13 @@ public final class LogMessageDo implements Serializable {
 
         return Objects.equals(this.source, other.source)
                 && Objects.equals(this.message, other.message)
-                && Objects.equals(this.createdAt, other.createdAt);
+                && Objects.equals(this.createdAt, other.createdAt)
+                && Objects.equals(this.level, other.level);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.source, this.message, this.createdAt);
+        return Objects.hash(this.source, this.message, this.createdAt, this.level);
     }
 
     /**
@@ -66,6 +78,7 @@ public final class LogMessageDo implements Serializable {
         private final String message;
         private String source;
         private Instant timestamp;
+        private LogLevel level;
 
         /**
          * Creates a new builder instance while registering the message of the log to be created.
@@ -101,9 +114,22 @@ public final class LogMessageDo implements Serializable {
         }
 
         /**
+         * Registers the given level for the log to be created.
+         *
+         * @param level Log level (severity, importance) of the log message
+         * @return self for further configurations
+         */
+        @SuppressWarnings("checkstyle:hiddenField")
+        public Builder level(final LogLevel level) {
+            this.level = level;
+            return this;
+        }
+
+        /**
          * Creates a {@link LogMessageDo} with the previously applied configurations.
          * Doesn't perform any validation in regard to presence and validity of configured attributes on purpose
          * - this is the responsibility of the caller.
+         *
          * @return Constructed {@link LogMessageDo} instance
          */
         public LogMessageDo build() {

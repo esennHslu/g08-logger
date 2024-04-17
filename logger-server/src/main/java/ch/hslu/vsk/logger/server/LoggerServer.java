@@ -1,13 +1,17 @@
 package ch.hslu.vsk.logger.server;
 
-import ch.hslu.vsk.logger.common.SocketConnection;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
+import ch.hslu.vsk.stringpersistor.FileStringPersistor;
+import ch.hslu.vsk.stringpersistor.api.StringPersistor;
 
 import java.io.EOFException;
 import java.io.ObjectInputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.file.Path;
+import java.time.Instant;
 
 /**
  * The {@code LoggerServer} class encapsulates a simple TCP server that listens for log messages
@@ -17,15 +21,30 @@ import java.net.SocketException;
  */
 public class LoggerServer {
     private final ServerSocket serverSocket;
+    private final StringPersistor stringPersistor = new FileStringPersistor();
+    private final ConfigReader config = new ConfigReader();
 
     /**
      * Constructs a new {@code LoggerServer} that listens on the specified port.
      *
-     * @param port The port number on which the server will listen for incoming connections.
      * @throws Exception If an I/O error occurs when opening the socket.
      */
-    public LoggerServer(final int port) throws Exception {
-        serverSocket = new ServerSocket(port);
+    public LoggerServer() throws Exception {
+        serverSocket = new ServerSocket(config.getSocketPort(), 0, InetAddress.getByName(config.getSocketAddress()));
+        stringPersistor.setFile(this.getLogfilePath());
+    }
+
+    /**
+     * Calculates the path depending if the config contains absolute or relative path.
+     * Mainly used during development can be removed once dockerization is finished (always absolute path).
+     * @return Path to logfile.
+     */
+    private Path getLogfilePath() {
+        var logPath = Path.of(config.getLogFilePath());
+        if (logPath.isAbsolute()) {
+            return logPath;
+        }
+        return Path.of(System.getProperty("user.dir"), logPath.toString());
     }
 
     /**
@@ -33,6 +52,7 @@ public class LoggerServer {
      * For each connection, it reads a {@code LogMessage} object and prints its message to the console.
      * This method demonstrates handling of client socket connections and object input streams.
      */
+    @SuppressWarnings("InfiniteLoopStatement")
     public void start() {
         System.out.println("Server started, waiting for connections...");
 
@@ -40,10 +60,7 @@ public class LoggerServer {
             try (ObjectInputStream inputStream = new ObjectInputStream(clientSocket.getInputStream())) {
                 while (true) {
                     LogMessageDo messageDo = (LogMessageDo) inputStream.readObject();
-                    System.out.printf("[%s][%s] - %s%n",
-                            messageDo.getSource(),
-                            messageDo.getCreatedAt(),
-                            messageDo.getMessage());
+                    this.logMessage(messageDo);
                 }
             } catch (EOFException e) {
                 System.out.println("Client closed the connection");
@@ -60,6 +77,16 @@ public class LoggerServer {
         }
     }
 
+    private void logMessage(final LogMessageDo messageDo) {
+        var msg = String.format("[%s | %s, %s]: %s",
+                messageDo.getLevel(),
+                messageDo.getSource(),
+                messageDo.getCreatedAt(),
+                messageDo.getMessage());
+        stringPersistor.save(Instant.now(), msg);
+        System.out.println(msg);
+    }
+
     /**
      * The entry point for the server application.
      * Creates an instance of {@code LoggerServer} and starts it.
@@ -69,7 +96,7 @@ public class LoggerServer {
      * @throws Exception If an error occurs starting the server.
      */
     public static void main(final String[] args) throws Exception {
-        LoggerServer server = new LoggerServer(SocketConnection.SOCKET_PORT);
+        LoggerServer server = new LoggerServer();
         server.start();
     }
 }
