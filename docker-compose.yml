@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  logger-server:
+    build: .  # Assumes the Dockerfile is in the same directory as this docker-compose.yml
+    ports:
+      - "9999:9999"  # Maps port 9999 of the container to port 9999 on the host
+    container_name: logger_server
+    restart: unless-stopped  # Ensures the container restarts if it crashes, unless manually stopped
+    environment:
+      - JAVA_OPTS=-Xmx256m -Xms128m  # Example: Setting Java options for memory management, adjust as needed
+    volumes:
+      - ./data:/app/data  # Optional: Mount a host directory as a volume for persistent data
