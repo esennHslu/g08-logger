@@ -1,6 +1,7 @@
 package ch.hslu.vsk.logger.server;
 
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
+import ch.hslu.vsk.logger.server.logstrategies.TextLogStrategy;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
 
@@ -11,7 +12,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.file.Path;
-import java.time.Instant;
 
 /**
  * The {@code LoggerServer} class encapsulates a simple TCP server that listens for log messages
@@ -21,8 +21,9 @@ import java.time.Instant;
  */
 public class LoggerServer {
     private final ServerSocket serverSocket;
-    private final StringPersistor stringPersistor = new FileStringPersistor();
-    private final ConfigReader config = new ConfigReader();
+    private final StringPersistor stringPersistor;
+    private final LogStrategy strategy;
+    private final ConfigReader config;
 
     /**
      * Constructs a new {@code LoggerServer} that listens on the specified port.
@@ -30,7 +31,13 @@ public class LoggerServer {
      * @throws Exception If an I/O error occurs when opening the socket.
      */
     public LoggerServer() throws Exception {
-        serverSocket = new ServerSocket(config.getSocketPort(), 0, InetAddress.getByName(config.getSocketAddress()));
+        this.config = new ConfigReader();
+
+        serverSocket = new ServerSocket(config.getSocketPort(), 0,
+                InetAddress.getByName(config.getSocketAddress()));
+
+        this.stringPersistor = new FileStringPersistor();
+        this.strategy = new TextLogStrategy();
         stringPersistor.setFile(this.getLogfilePath());
     }
 
@@ -78,12 +85,8 @@ public class LoggerServer {
     }
 
     private void logMessage(final LogMessageDo messageDo) {
-        var msg = String.format("[%s | %s, %s]: %s",
-                messageDo.getLevel(),
-                messageDo.getSource(),
-                messageDo.getCreatedAt(),
-                messageDo.getMessage());
-        stringPersistor.save(Instant.now(), msg);
+        var msg = this.strategy.format(messageDo);
+        this.stringPersistor.save(messageDo.getCreatedAt(), msg);
         System.out.println(msg);
     }
 
