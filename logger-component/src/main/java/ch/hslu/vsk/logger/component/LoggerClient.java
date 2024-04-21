@@ -9,8 +9,11 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.URI;
-import java.nio.file.Path;
 import java.time.Instant;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The {@code LoggerClient} class provides functionalities to log messages to a remote server.
@@ -22,35 +25,90 @@ import java.time.Instant;
  *          .requires(LogLevel.Info)
  *          .from("client")
  *          .usesAsFallback(Path.of("/dev", "null"))
- *          .targetsServer(URI.create("http://localhost:9999"))
+ *          .targetsServer(URI.create("localhost:9999"))
  *          .build();
  *  client.info("This is an info-level message");
  * </pre>
  */
 public class LoggerClient implements LoggerSetup {
-    private ObjectOutputStream outputStream;
     private LogLevel minLogLevel;
+    private Socket socket;
+    private ObjectOutputStream outputStream;
+    private final URI targetServerAddress;
+    private ScheduledFuture<?> reconnectFuture;
     private final String source;
+    private final ScheduledExecutorService scheduler;
+    private final LogCacher logCacher;
+    private boolean isReconnecting;
 
     protected LoggerClient(final LoggerClientBuilder builder) {
-
+        this.scheduler = Executors.newScheduledThreadPool(1);
         this.minLogLevel = builder.getMinLogLevel();
         this.source = builder.getSource();
-        Path fallbackFile = builder.getFallbackFile(); //TODO: Use this when implementing fallback
-        URI targetServerAddress = builder.getTargetServerAddress();
+        this.logCacher = new LogCacher(builder.getFallbackFile());
+        this.targetServerAddress = builder.getTargetServerAddress();
+        try {
+            this.socket = new Socket(targetServerAddress.getHost(), targetServerAddress.getPort());
+            this.outputStream = new ObjectOutputStream(socket.getOutputStream());
+            this.logCacher.sendCachedLogs(this::sendLog);
+        } catch (IOException ioException) {
+            this.tryToReconnect();
+        }
+    }
+
+    /**
+     * Sends a log to the remote target.
+     *
+     * @param message The message to send.
+     * @param level   The LogLevel of the message.
+     */
+    public void sendLog(final String message, final LogLevel level) {
+        LogMessageDo messageDo = new LogMessageDo.Builder(message)
+                .from(source)
+                .at(Instant.now())
+                .level(level)
+                .build();
+
+        this.sendLog(messageDo);
+    }
+
+    private void sendLog(final LogMessageDo messageDo) {
+        if (messageDo.getLevel().compareTo(this.minLogLevel) > 0) {
+            return; // do not log if log level is below minimum level
+        }
 
         try {
-            @SuppressWarnings("resource")
-            Socket socket = new Socket(targetServerAddress.getHost(), targetServerAddress.getPort());
-            this.outputStream = new ObjectOutputStream(socket.getOutputStream());
-        } catch (IOException ioException) {
-            // TODO: Handle case connection not established
-            System.out.println(ioException.getMessage());
+            outputStream.writeObject(messageDo);
+            outputStream.flush();
+        } catch (Exception e) {
+            this.tryToReconnect();
+            this.logCacher.cache(messageDo);
+        }
+    }
+
+    @SuppressWarnings("EmptyCatchBlock")
+    private void tryToReconnect() {
+        if (!this.isReconnecting) {
+            this.isReconnecting = true;
+            this.reconnectFuture = this.scheduler.scheduleAtFixedRate(() -> {
+                        try {
+                            this.socket = new Socket(targetServerAddress.getHost(), targetServerAddress.getPort());
+                            this.outputStream = new ObjectOutputStream(socket.getOutputStream());
+                            this.logCacher.sendCachedLogs(this::sendLog);
+                            this.isReconnecting = false;
+                            this.reconnectFuture.cancel(false);
+                        } catch (IOException ignored) {
+                        }
+                    },
+                    0,
+                    500,
+                    TimeUnit.MILLISECONDS);
         }
     }
 
     /**
      * Creates an Instance of the RemoteLogger.
+     *
      * @return Instance of RemoteLogger
      */
     @Override
@@ -76,33 +134,5 @@ public class LoggerClient implements LoggerSetup {
     @Override
     public void setMinLogLevel(final LogLevel logLevel) {
         this.minLogLevel = logLevel;
-    }
-
-    /**
-     * Sends a log to the remote target.
-     *
-     * @param message The message to send.
-     * @param level The LogLevel of the message.
-     */
-    public void sendLog(final String message, final LogLevel level) {
-        if (level.compareTo(this.minLogLevel) > 0) {
-            return; // do not log if log level is below minimum level
-        }
-
-        Instant timestamp = Instant.now();
-
-        LogMessageDo messageDo = new LogMessageDo.Builder(message)
-                .from(source)
-                .at(timestamp)
-                .level(level)
-                .build();
-
-        try {
-            outputStream.writeObject(messageDo);
-            outputStream.flush();
-        } catch (IOException ioException) {
-            // TODO: Log to fallback
-            System.out.println(ioException.getMessage());
-        }
     }
 }
