@@ -64,6 +64,10 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>ch.hslu.vsk24fs.g08</groupId>
+            <artifactId>g08-stringpersistor</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
