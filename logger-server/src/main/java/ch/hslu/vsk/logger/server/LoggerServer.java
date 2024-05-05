@@ -5,13 +5,16 @@ import ch.hslu.vsk.logger.server.logstrategies.TextLogStrategy;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
 
-import java.io.EOFException;
-import java.io.ObjectInputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.file.Path;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * The {@code LoggerServer} class encapsulates a simple TCP server that listens for log messages
@@ -19,31 +22,86 @@ import java.nio.file.Path;
  * This server demonstrates a basic usage of Java's {@code ServerSocket} for accepting connections
  * and reading objects sent to it over an Object stream.
  */
-public class LoggerServer {
-    private final ServerSocket serverSocket;
+public final class LoggerServer {
     private final StringPersistor stringPersistor;
     private final LogStrategy strategy;
     private final ConfigReader config;
 
     /**
-     * Constructs a new {@code LoggerServer} that listens on the specified port.
+     * Constructs a new {@code LoggerServer} instance while injecting and configuring its dependencies.
      *
-     * @throws Exception If an I/O error occurs when opening the socket.
+     * @param config          Reader in order to resolve configuration properties
+     * @param logStrategy     Log format to use for serializing log-messages
+     * @param stringPersistor Component for persisting log-messages
+     * @throws IllegalArgumentException if one of the arguments is {@code null}
      */
-    public LoggerServer() throws Exception {
-        this.config = new ConfigReader();
+    public LoggerServer(final ConfigReader config,
+                        final LogStrategy logStrategy,
+                        final StringPersistor stringPersistor) {
+        if (config == null) {
+            throw new IllegalArgumentException("Provided config reader cannot be null");
+        }
+        if (logStrategy == null) {
+            throw new IllegalArgumentException("Provided log strategy cannot be null");
+        }
+        if (stringPersistor == null) {
+            throw new IllegalArgumentException("Provided string-persistor cannot be null");
+        }
 
-        serverSocket = new ServerSocket(config.getSocketPort(), 0,
-                InetAddress.getByName(config.getSocketAddress()));
+        this.config = config;
+        this.strategy = logStrategy;
+        this.stringPersistor = stringPersistor;
 
-        this.stringPersistor = new FileStringPersistor();
-        this.strategy = new TextLogStrategy();
-        stringPersistor.setFile(this.getLogfilePath());
+        this.stringPersistor.setFile(getLogfilePath());
     }
 
     /**
-     * Calculates the path depending if the config contains absolute or relative path.
+     * Starts the server which attempts to listen on the socket with the config specified port.
+     * Upon successful connection on port, listens for incoming connections and delegates the further handling.
+     *
+     * @throws IllegalStateException if the leasing of the socket failed or the server is in an invalid,
+     *                               non-recoverable state and thus to be terminated.
+     */
+    @SuppressWarnings("InfiniteLoopStatement")
+    public void listen() {
+        BlockingQueue<LogMessageDo> logPipeline = new PriorityBlockingQueue<>();
+
+        try (ServerSocket listener = new ServerSocket(config.getSocketPort(), 0,
+                InetAddress.getByName(config.getSocketAddress()));
+             ExecutorService persistorExecutor = Executors.newSingleThreadExecutor();
+             ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Runnable logPersistor = new LogMessagePersistor(logPipeline, strategy, stringPersistor);
+            persistorExecutor.execute(logPersistor);
+
+            System.out.printf("Server started, listening on %s:%d for connections...%n",
+                    config.getSocketAddress(),
+                    config.getSocketPort());
+
+            while (true) {
+                Socket client = listener.accept();
+                Runnable logConsumer = new LogMessageConsumer(client, logPipeline);
+                virtualThreadExecutor.execute(logConsumer);
+            }
+        } catch (UnknownHostException unknownHostException) {
+            System.err.printf("Failed to resolve host during startup, for hostname: %s, due to: %s%n",
+                    config.getSocketAddress(),
+                    unknownHostException.getMessage());
+            throw new IllegalStateException("Failed to listen for incoming connections", unknownHostException);
+        } catch (IOException ioException) {
+            System.err.printf("Failed to connect to socket on port: %d, due to: %s%n",
+                    config.getSocketPort(),
+                    ioException.getMessage());
+            throw new IllegalStateException("Failed to listen for incoming connections", ioException);
+        } catch (Exception exception) {
+            System.err.printf("Something unexpected went wrong, reason: %s%n", exception.getMessage());
+            throw new IllegalStateException("Unexpected error during runtime", exception);
+        }
+    }
+
+    /**
+     * Calculates the path depending on if the config contains absolute or relative path.
      * Mainly used during development can be removed once dockerization is finished (always absolute path).
+     *
      * @return Path to logfile.
      */
     private Path getLogfilePath() {
@@ -55,51 +113,17 @@ public class LoggerServer {
     }
 
     /**
-     * Starts the server, which enters an infinite loop, listening for and processing incoming connections.
-     * For each connection, it reads a {@code LogMessage} object and prints its message to the console.
-     * This method demonstrates handling of client socket connections and object input streams.
-     */
-    @SuppressWarnings("InfiniteLoopStatement")
-    public void start() {
-        System.out.println("Server started, waiting for connections...");
-
-        try (Socket clientSocket = serverSocket.accept()) {
-            try (ObjectInputStream inputStream = new ObjectInputStream(clientSocket.getInputStream())) {
-                while (true) {
-                    LogMessageDo messageDo = (LogMessageDo) inputStream.readObject();
-                    this.logMessage(messageDo);
-                }
-            } catch (EOFException e) {
-                System.out.println("Client closed the connection");
-            } catch (SocketException e) {
-                System.out.println("SocketException: Possible client forceful termination or network issue. Message: "
-                        + e.getMessage());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void logMessage(final LogMessageDo messageDo) {
-        var msg = this.strategy.format(messageDo);
-        this.stringPersistor.save(messageDo.getCreatedAt(), msg);
-        System.out.println(msg);
-    }
-
-    /**
      * The entry point for the server application.
      * Creates an instance of {@code LoggerServer} and starts it.
-     * The port number is retrieved from a shared constant {@code SocketConnection.SOCKET_PORT}.
      *
      * @param args The command-line arguments for the application (not used).
-     * @throws Exception If an error occurs starting the server.
      */
-    public static void main(final String[] args) throws Exception {
-        LoggerServer server = new LoggerServer();
-        server.start();
+    public static void main(final String[] args) {
+        ConfigReader configReader = new ConfigReader();
+        LogStrategy logStrategy = new TextLogStrategy();
+        StringPersistor stringPersistor = new FileStringPersistor();
+
+        LoggerServer server = new LoggerServer(configReader, logStrategy, stringPersistor);
+        server.listen();
     }
 }
