@@ -8,7 +8,7 @@ WORKDIR /app
 COPY logger-server/target /app/target
 
 # Expose the port the app runs on
-EXPOSE 8080
+EXPOSE 9999
 
 RUN ls -lisat /app/target
 # Set the startup command to execute the jar
