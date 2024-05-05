@@ -39,7 +39,8 @@ public final class LoggerServer {
      */
     public LoggerServer(final ConfigReader config,
                         final LogStrategy logStrategy,
-                        final StringPersistor stringPersistor) {
+                        final StringPersistor stringPersistor,
+                        final LogMessageAdapter logMessageAdapter) {
         if (config == null) {
             throw new IllegalArgumentException("Provided config reader cannot be null");
         }
@@ -49,13 +50,15 @@ public final class LoggerServer {
         if (stringPersistor == null) {
             throw new IllegalArgumentException("Provided string-persistor cannot be null");
         }
+        if (logMessageAdapter == null) {
+            throw new IllegalArgumentException("Provided log-message-adapter cannot be null");
+        }
 
         this.config = config;
         this.strategy = logStrategy;
         this.stringPersistor = stringPersistor;
-
         this.stringPersistor.setFile(getLogfilePath());
-        this.logMessageAdapter = new LogMessageAdapter(this.stringPersistor, this.strategy);
+        this.logMessageAdapter = logMessageAdapter;
     }
 
     /**
@@ -125,8 +128,9 @@ public final class LoggerServer {
         ConfigReader configReader = new ConfigReader();
         LogStrategy logStrategy = new TextLogStrategy();
         StringPersistor stringPersistor = new FileStringPersistor();
+        LogMessageAdapter logMessageAdapter = new LogMessageAdapter(stringPersistor, logStrategy);
 
-        LoggerServer server = new LoggerServer(configReader, logStrategy, stringPersistor);
+        LoggerServer server = new LoggerServer(configReader, logStrategy, stringPersistor, logMessageAdapter);
         server.listen();
     }
 }
