@@ -1,5 +1,6 @@
 package ch.hslu.vsk.logger.server;
 
+import ch.hslu.vsk.logger.adapter.LogMessageAdapter;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 import ch.hslu.vsk.logger.server.logstrategies.TextLogStrategy;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
@@ -26,6 +27,7 @@ public final class LoggerServer {
     private final StringPersistor stringPersistor;
     private final LogStrategy strategy;
     private final ConfigReader config;
+    private final LogMessageAdapter logMessageAdapter;
 
     /**
      * Constructs a new {@code LoggerServer} instance while injecting and configuring its dependencies.
@@ -53,6 +55,7 @@ public final class LoggerServer {
         this.stringPersistor = stringPersistor;
 
         this.stringPersistor.setFile(getLogfilePath());
+        this.logMessageAdapter = new LogMessageAdapter(this.stringPersistor, this.strategy);
     }
 
     /**
@@ -70,7 +73,7 @@ public final class LoggerServer {
                 InetAddress.getByName(config.getSocketAddress()));
              ExecutorService persistorExecutor = Executors.newSingleThreadExecutor();
              ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
-            Runnable logPersistor = new LogMessagePersistor(logPipeline, strategy, stringPersistor);
+            Runnable logPersistor = new LogMessagePersistor(logPipeline, logMessageAdapter);
             persistorExecutor.execute(logPersistor);
 
             System.out.printf("Server started, listening on %s:%d for connections...%n",
