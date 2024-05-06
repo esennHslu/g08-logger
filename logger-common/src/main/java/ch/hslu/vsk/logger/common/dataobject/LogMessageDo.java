@@ -1,11 +1,11 @@
 package ch.hslu.vsk.logger.common.dataobject;
 
+import ch.hslu.vsk.logger.api.LogLevel;
+
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
-
-import ch.hslu.vsk.logger.api.LogLevel;
 
 /**
  * Immutable POJO holding all fields of a log message during transmission from logger-component to logger-server.
@@ -19,18 +19,20 @@ import ch.hslu.vsk.logger.api.LogLevel;
  *                 .build();
  * </pre>
  */
-public final class LogMessageDo implements Serializable {
+public final class LogMessageDo implements Serializable, Comparable<LogMessageDo> {
     @Serial
-    private static final long serialVersionUID = 8658874023243910484L;
+    private static final long serialVersionUID = 824312352809765853L;
     private final String source;
     private final String message;
     private final Instant createdAt;
+    private final Instant processedAt;
     private final LogLevel level;
 
     private LogMessageDo(final Builder builder) {
         this.source = builder.source;
         this.message = builder.message;
         this.createdAt = builder.timestamp;
+        this.processedAt = builder.processed;
         this.level = builder.level;
     }
 
@@ -44,6 +46,10 @@ public final class LogMessageDo implements Serializable {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getProcessedAt() {
+        return processedAt;
     }
 
     public LogLevel getLevel() {
@@ -63,12 +69,36 @@ public final class LogMessageDo implements Serializable {
         return Objects.equals(this.source, other.source)
                 && Objects.equals(this.message, other.message)
                 && Objects.equals(this.createdAt, other.createdAt)
+                && Objects.equals(this.processedAt, other.processedAt)
                 && Objects.equals(this.level, other.level);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.source, this.message, this.createdAt, this.level);
+        return Objects.hash(this.source,
+                this.message,
+                this.createdAt,
+                this.processedAt,
+                this.level);
+    }
+
+    /**
+     * Compares this to given {@code other} based on their creation timestamps, enforcing an ascending order.
+     *
+     * @param other the object to be compared.
+     * @return {@code < 0} if this is before, {@code > 0} if this is after, else {@code 0}
+     */
+    @Override
+    public int compareTo(final LogMessageDo other) {
+        if (this.createdAt.isAfter(other.createdAt)) {
+            return 1;
+        }
+
+        if (this.createdAt.isBefore(other.createdAt)) {
+            return -1;
+        }
+
+        return 0;
     }
 
     /**
@@ -78,6 +108,7 @@ public final class LogMessageDo implements Serializable {
         private final String message;
         private String source;
         private Instant timestamp;
+        private Instant processed;
         private LogLevel level;
 
         /**
@@ -110,6 +141,18 @@ public final class LogMessageDo implements Serializable {
         @SuppressWarnings("checkstyle:hiddenField")
         public Builder at(final Instant timestamp) {
             this.timestamp = timestamp;
+            return this;
+        }
+
+        /**
+         * Registers the given timestamp for the instant the log was processed. Should only be set on the server.
+         *
+         * @param timestamp Point of time when the log message was processed on the server
+         * @return self for further configurations
+         */
+        @SuppressWarnings("checkstyle:hiddenField")
+        public Builder processed(final Instant timestamp) {
+            this.processed = timestamp;
             return this;
         }
 
