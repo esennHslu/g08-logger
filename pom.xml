@@ -21,7 +21,7 @@
 
     <groupId>ch.hslu.vsk24fs.g08</groupId>
     <artifactId>g08-logger</artifactId>
-    <version>3.0.0</version>
+    <version>4.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>g08-logger</name>
@@ -130,7 +130,7 @@
             <dependency>
                 <groupId>ch.hslu.vsk24fs.g08</groupId>
                 <artifactId>g08-stringpersistor</artifactId>
-                <version>3.0.0</version>
+                <version>4.0.0-SNAPSHOT</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>
