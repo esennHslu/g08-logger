@@ -15,19 +15,21 @@
  * limitations under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ch.hslu.vsk24fs.g08</groupId>
     <artifactId>g08-logger</artifactId>
-    <version>2.0.0</version>
+    <version>3.0.0</version>
     <packaging>pom</packaging>
 
     <name>g08-logger</name>
     <description>
         VSK Logger System der Gruppe g08.
     </description>
-    <url>https://hslu.pages.switch.ch/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}</url>
+    <url>https://hslu.pages.switch.ch/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}
+    </url>
 
     <modules>
         <module>logger-common</module>
@@ -60,20 +62,30 @@
     </developers>
 
     <scm>
-        <connection>scm:git:https://${scm.developer.uid}@gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}.git</connection>
-        <developerConnection>scm:git:ssh://git@gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}.git</developerConnection>
-        <url>https://gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}/tree/develop</url>
+        <connection>
+            scm:git:https://${scm.developer.uid}@gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}.git
+        </connection>
+        <developerConnection>
+            scm:git:ssh://git@gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}.git
+        </developerConnection>
+        <url>
+            https://gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}/tree/develop
+        </url>
         <tag>HEAD</tag>
     </scm>
 
     <issueManagement>
         <system>GitLab Repository - Switch</system>
-        <url>https://gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}/-/issues</url>
+        <url>
+            https://gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}/-/issues
+        </url>
     </issueManagement>
 
     <ciManagement>
         <system>CI auf GitLab - Switch</system>
-        <url>https://gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}/-/pipelines</url>
+        <url>
+            https://gitlab.switch.ch/hslu/edu/bachelor-computer-science/vsk/${scm.group.name}/g08/${project.artifactId}/-/pipelines
+        </url>
     </ciManagement>
 
     <properties>
@@ -118,7 +130,7 @@
             <dependency>
                 <groupId>ch.hslu.vsk24fs.g08</groupId>
                 <artifactId>g08-stringpersistor</artifactId>
-                <version>2.0.0</version>
+                <version>3.0.0</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>
@@ -464,7 +476,7 @@
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
             </snapshots>
-        </repository>    
+        </repository>
         <repository>
             <id>gitlab-maven-repo-vsk-stringpersistor</id>
             <url>https://gitlab.switch.ch/api/v4/projects/5590/packages/maven</url>
@@ -472,7 +484,7 @@
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
             </snapshots>
-        </repository>    
+        </repository>
         <repository>
             <id>gitlab-maven-vsk-stringpersistor-api</id>
             <url>https://gitlab.com/api/v4/projects/38313718/packages/maven</url>
