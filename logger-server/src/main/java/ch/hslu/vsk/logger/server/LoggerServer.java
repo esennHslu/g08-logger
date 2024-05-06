@@ -24,40 +24,25 @@ import java.util.concurrent.PriorityBlockingQueue;
  * and reading objects sent to it over an Object stream.
  */
 public final class LoggerServer {
-    private final StringPersistor stringPersistor;
-    private final LogStrategy strategy;
     private final ConfigReader config;
     private final LogMessageAdapter logMessageAdapter;
 
     /**
      * Constructs a new {@code LoggerServer} instance while injecting and configuring its dependencies.
      *
-     * @param config          Reader in order to resolve configuration properties
-     * @param logStrategy     Log format to use for serializing log-messages
-     * @param stringPersistor Component for persisting log-messages
+     * @param config            Reader in order to resolve configuration properties
+     * @param logMessageAdapter Adapter for persisting log messages
      * @throws IllegalArgumentException if one of the arguments is {@code null}
      */
-    public LoggerServer(final ConfigReader config,
-                        final LogStrategy logStrategy,
-                        final StringPersistor stringPersistor,
-                        final LogMessageAdapter logMessageAdapter) {
+    public LoggerServer(final ConfigReader config, final LogMessageAdapter logMessageAdapter) {
         if (config == null) {
             throw new IllegalArgumentException("Provided config reader cannot be null");
-        }
-        if (logStrategy == null) {
-            throw new IllegalArgumentException("Provided log strategy cannot be null");
-        }
-        if (stringPersistor == null) {
-            throw new IllegalArgumentException("Provided string-persistor cannot be null");
         }
         if (logMessageAdapter == null) {
             throw new IllegalArgumentException("Provided log-message-adapter cannot be null");
         }
 
         this.config = config;
-        this.strategy = logStrategy;
-        this.stringPersistor = stringPersistor;
-        this.stringPersistor.setFile(getLogfilePath());
         this.logMessageAdapter = logMessageAdapter;
     }
 
@@ -105,20 +90,6 @@ public final class LoggerServer {
     }
 
     /**
-     * Calculates the path depending on if the config contains absolute or relative path.
-     * Mainly used during development can be removed once dockerization is finished (always absolute path).
-     *
-     * @return Path to logfile.
-     */
-    private Path getLogfilePath() {
-        var logPath = Path.of(config.getLogFilePath());
-        if (logPath.isAbsolute()) {
-            return logPath;
-        }
-        return Path.of(System.getProperty("user.dir"), logPath.toString());
-    }
-
-    /**
      * The entry point for the server application.
      * Creates an instance of {@code LoggerServer} and starts it.
      *
@@ -128,9 +99,10 @@ public final class LoggerServer {
         ConfigReader configReader = new ConfigReader();
         LogStrategy logStrategy = new TextLogStrategy();
         StringPersistor stringPersistor = new FileStringPersistor();
+        stringPersistor.setFile(Path.of(configReader.getLogFilePath()));
         LogMessageAdapter logMessageAdapter = new LogMessageAdapter(stringPersistor, logStrategy);
 
-        LoggerServer server = new LoggerServer(configReader, logStrategy, stringPersistor, logMessageAdapter);
+        LoggerServer server = new LoggerServer(configReader, logMessageAdapter);
         server.listen();
     }
 }
