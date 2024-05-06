@@ -89,6 +89,16 @@ public final class LoggerServer {
         }
     }
 
+    private void logMessage(final LogMessageDo messageDo) {
+        var msg = String.format("[%s | %s, %s]: %s",
+                messageDo.getLevel(),
+                messageDo.getSource(),
+                messageDo.getCreatedAt(),
+                messageDo.getMessage());
+        stringPersistor.save(Instant.now(), msg);
+        System.out.println(msg);
+    }
+
     /**
      * The entry point for the server application.
      * Creates an instance of {@code LoggerServer} and starts it.

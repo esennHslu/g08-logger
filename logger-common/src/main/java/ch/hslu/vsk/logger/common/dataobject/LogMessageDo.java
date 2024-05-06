@@ -7,6 +7,8 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.Objects;
 
+import ch.hslu.vsk.logger.api.LogLevel;
+
 /**
  * Immutable POJO holding all fields of a log message during transmission from logger-component to logger-server.
  * <br />
