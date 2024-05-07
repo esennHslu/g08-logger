@@ -1,22 +1,16 @@
 package ch.hslu.vsk.logger.adapter;
 
-import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-
 import ch.hslu.vsk.logger.api.LogLevel;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 import ch.hslu.vsk.logger.server.LogStrategy;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 /**
  * @author esenn
@@ -27,10 +21,12 @@ public class LogMessageAdapterTest {
         StringPersistor mockPersistor = mock(StringPersistor.class);
         LogStrategy mockStrategy = mock(LogStrategy.class);
         LogMessageAdapter adapter = new LogMessageAdapter(mockPersistor, mockStrategy);
-        Instant fixedInstant = Instant.parse("2007-12-03T10:15:30Z");
+        Instant createdInstant = Instant.parse("2007-12-03T10:15:30Z");
+        Instant processedInstant = Instant.parse("2007-12-03T10:20:30Z");
         LogMessageDo messageDo = new LogMessageDo.Builder("test")
                 .from("source")
-                .at(fixedInstant)
+                .at(createdInstant)
+                .processed(processedInstant)
                 .level(LogLevel.Info)
                 .build();
 
@@ -41,7 +37,7 @@ public class LogMessageAdapterTest {
         adapter.saveLogMessage(messageDo);
 
         // Verify that the save method was called with the correct parameters
-        verify(mockPersistor).save(eq(fixedInstant), eq(expectedMessage));
+        verify(mockPersistor).save(eq(processedInstant), eq(expectedMessage));
     }
 
 
@@ -50,12 +46,14 @@ public class LogMessageAdapterTest {
         StringPersistor mockPersistor = mock(StringPersistor.class);
         LogStrategy mockStrategy = mock(LogStrategy.class);
         LogMessageAdapter adapter = new LogMessageAdapter(mockPersistor, mockStrategy);
-        Instant fixedInstant = Instant.parse("2007-12-03T10:15:30Z");
+        Instant createdInstant = Instant.parse("2007-12-03T10:15:30Z");
+        Instant processedInstant = Instant.parse("2007-12-03T10:20:30Z");
         LogLevel[] levels = LogLevel.values();
         for (LogLevel level : levels) {
             LogMessageDo messageDo = new LogMessageDo.Builder("test")
                     .from("source")
-                    .at(fixedInstant)
+                    .at(createdInstant)
+                    .processed(processedInstant)
                     .level(level)
                     .build();
             String expectedMessage = "[" + level + "]: message";
@@ -70,10 +68,12 @@ public class LogMessageAdapterTest {
         StringPersistor mockPersistor = mock(StringPersistor.class);
         LogStrategy mockStrategy = mock(LogStrategy.class);
         LogMessageAdapter adapter = new LogMessageAdapter(mockPersistor, mockStrategy);
-        Instant fixedInstant = Instant.parse("2007-12-03T10:15:30Z");
+        Instant createdInstant = Instant.parse("2007-12-03T10:15:30Z");
+        Instant processedInstant = Instant.parse("2007-12-03T10:20:30Z");
         LogMessageDo emptyMessageDo = new LogMessageDo.Builder("")
                 .from("source")
-                .at(fixedInstant)
+                .at(createdInstant)
+                .processed(processedInstant)
                 .level(LogLevel.Info)
                 .build();
         String expectedMessage = "[]: ";

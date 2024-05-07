@@ -1,7 +1,6 @@
 package ch.hslu.vsk.logger.server;
 
 import ch.hslu.vsk.logger.adapter.LogMessageAdapter;
-import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 import ch.hslu.vsk.logger.server.logstrategies.TextLogStrategy;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
@@ -14,10 +13,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * The {@code LoggerServer} class encapsulates a simple TCP server that listens for log messages
@@ -58,22 +55,16 @@ public final class LoggerServer {
      */
     @SuppressWarnings("InfiniteLoopStatement")
     public void listen() {
-        BlockingQueue<LogMessageDo> logPipeline = new PriorityBlockingQueue<>();
-
         try (ServerSocket listener = new ServerSocket(config.getSocketPort(), 0,
                 InetAddress.getByName(config.getSocketAddress()));
-             ExecutorService persistorExecutor = Executors.newSingleThreadExecutor();
              ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
-            Runnable logPersistor = new LogMessagePersistor(logPipeline, logMessageAdapter);
-            persistorExecutor.execute(logPersistor);
-
             LOG.info("Server started, listening on {}:{} for connections...",
                     config.getSocketAddress(),
                     config.getSocketPort());
 
             while (true) {
                 Socket client = listener.accept();
-                Runnable logConsumer = new LogMessageConsumer(client, logPipeline);
+                Runnable logConsumer = new LogMessageRequestHandler(client, logMessageAdapter);
                 virtualThreadExecutor.execute(logConsumer);
             }
         } catch (UnknownHostException unknownHostException) {
