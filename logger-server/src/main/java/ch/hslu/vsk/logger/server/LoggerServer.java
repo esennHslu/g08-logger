@@ -5,6 +5,8 @@ import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 import ch.hslu.vsk.logger.server.logstrategies.TextLogStrategy;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -24,6 +26,7 @@ import java.util.concurrent.PriorityBlockingQueue;
  * and reading objects sent to it over an Object stream.
  */
 public final class LoggerServer {
+    private static final Logger LOG = LoggerFactory.getLogger(LoggerServer.class);
     private final ConfigReader config;
     private final LogMessageAdapter logMessageAdapter;
 
@@ -64,7 +67,7 @@ public final class LoggerServer {
             Runnable logPersistor = new LogMessagePersistor(logPipeline, logMessageAdapter);
             persistorExecutor.execute(logPersistor);
 
-            System.out.printf("Server started, listening on %s:%d for connections...%n",
+            LOG.info("Server started, listening on {}:{} for connections...",
                     config.getSocketAddress(),
                     config.getSocketPort());
 
@@ -74,17 +77,16 @@ public final class LoggerServer {
                 virtualThreadExecutor.execute(logConsumer);
             }
         } catch (UnknownHostException unknownHostException) {
-            System.err.printf("Failed to resolve host during startup, for hostname: %s, due to: %s%n",
-                    config.getSocketAddress(),
-                    unknownHostException.getMessage());
+            LOG.error(String.format("Failed to resolve host during startup, for hostname: %s",
+                            config.getSocketAddress()),
+                    unknownHostException);
             throw new IllegalStateException("Failed to listen for incoming connections", unknownHostException);
         } catch (IOException ioException) {
-            System.err.printf("Failed to connect to socket on port: %d, due to: %s%n",
-                    config.getSocketPort(),
+            LOG.error(String.format("Failed to connect to socket on port: %d", config.getSocketPort()),
                     ioException.getMessage());
             throw new IllegalStateException("Failed to listen for incoming connections", ioException);
         } catch (Exception exception) {
-            System.err.printf("Something unexpected went wrong, reason: %s%n", exception.getMessage());
+            LOG.error("Something unexpected went wrong", exception);
             throw new IllegalStateException("Unexpected error during runtime", exception);
         }
     }
