@@ -101,6 +101,15 @@ public final class LogMessageDo implements Serializable, Comparable<LogMessageDo
         return 0;
     }
 
+    @Override
+    public String toString() {
+        return String.format("[%s] [%s] %s: %s",
+                createdAt,
+                level,
+                source,
+                message);
+    }
+
     /**
      * Builder for creating {@link LogMessageDo} instances.
      */

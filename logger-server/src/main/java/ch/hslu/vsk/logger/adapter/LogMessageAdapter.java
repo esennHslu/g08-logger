@@ -33,8 +33,8 @@ public class LogMessageAdapter {
     public void saveLogMessage(final LogMessageDo messageDo) {
         try {
             var msg = this.strategy.format(messageDo);
-            this.stringPersistor.save(messageDo.getCreatedAt(), msg);
-            LOG.debug(msg);
+            this.stringPersistor.save(messageDo.getProcessedAt(), msg);
+            LOG.debug(messageDo.toString()); // be decoupled from used strategy for integration tests
         } catch (Exception e) {
             LOG.error("Error saving log message");
         }

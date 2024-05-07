@@ -1,10 +1,12 @@
 package ch.hslu.vsk.logger.common.dataobject;
 
+import ch.hslu.vsk.logger.api.LogLevel;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public final class LogMessageDoTest {
     @Test
@@ -34,8 +36,26 @@ public final class LogMessageDoTest {
         int equalWeight = referenceMessage.compareTo(messageEqual);
 
         // Assert
-        Assertions.assertTrue(beforeWeight < 0);
-        Assertions.assertTrue(afterWeight > 0);
-        Assertions.assertEquals(0, equalWeight);
+        assertThat(beforeWeight).isLessThan(0);
+        assertThat(afterWeight).isGreaterThan(0);
+        assertThat(equalWeight).isEqualTo(0);
+    }
+
+    @Test
+    public void testToStringFormat() {
+        // Arrange
+        Instant fixed = Instant.parse("2024-05-01T10:10:00.00Z");
+        String expectedStr = String.format("[%s] [Debug] test-app: test message", fixed);
+        var message = new LogMessageDo.Builder("test message")
+                .from("test-app")
+                .level(LogLevel.Debug)
+                .at(fixed)
+                .build();
+
+        // Act
+        String messageStr = message.toString();
+
+        // Assert
+        assertThat(messageStr).isEqualTo(expectedStr);
     }
 }

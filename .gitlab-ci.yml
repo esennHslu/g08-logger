@@ -14,36 +14,46 @@
 # limitations under the License.
 #
 default:
-    image: maven:3.9.6-eclipse-temurin-21
+  image: rgisler/maven:3.9.6-temurin-21
+  tags:
+    - hslu
+
+services:
+  - name: docker:dind
+    command: [ "--tls=false" ]
 
 variables:
-    MAVEN_CLI_OPTS: "-s .mvn/settings.xml --batch-mode"
-    MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+  CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:latest
+  MAVEN_CLI_OPTS: "-s .mvn/settings.xml --batch-mode"
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
 
 cache:
-    paths:
-        - .m2/repository
-        - target
+  paths:
+    - .m2/repository
+    - target
 
 stages:
-    - build
-    - deploy
+  - build
+  - deploy
 
 build:
-    stage: build
-    script:
-        - mvn $MAVEN_CLI_OPTS clean install deploy $MAVEN_OPTS
-    artifacts:
-        reports:
-            junit:
-                - target/surefire-reports/TEST-*.xml
-                - target/failsafe-reports/TEST-*.xml
+  stage: build
+  script:
+    - mvn $MAVEN_CLI_OPTS clean install deploy $MAVEN_OPTS
+  artifacts:
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+        - target/failsafe-reports/TEST-*.xml
 
 pages:
-    stage: deploy
-    script:
-        - mvn $MAVEN_CLI_OPTS site site:stage $MAVEN_OPTS
-        - mv target/staging public
-    artifacts:
-        paths:
-            - public
+  stage: deploy
+  script:
+    - mvn $MAVEN_CLI_OPTS site site:stage $MAVEN_OPTS
+    - mv target/staging public
+  artifacts:
+    paths:
+      - public
