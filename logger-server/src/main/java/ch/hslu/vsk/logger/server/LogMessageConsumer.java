@@ -1,6 +1,8 @@
 package ch.hslu.vsk.logger.server;
 
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -15,6 +17,7 @@ import java.util.concurrent.BlockingQueue;
  * be persisted later on.
  */
 public final class LogMessageConsumer implements Runnable {
+    private static final Logger LOG = LoggerFactory.getLogger(LogMessageConsumer.class);
     private final Socket client;
     private final BlockingQueue<LogMessageDo> logPipeline;
 
@@ -44,7 +47,7 @@ public final class LogMessageConsumer implements Runnable {
     @SuppressWarnings("InfiniteLoopStatement")
     @Override
     public void run() {
-        System.out.printf("Connected to: %s%n", client);
+        LOG.info("Connected to: {}", client);
         try (ObjectInputStream inputStream = new ObjectInputStream(client.getInputStream())) {
             while (true) {
                 LogMessageDo messageDo = (LogMessageDo) inputStream.readObject();
@@ -57,27 +60,23 @@ public final class LogMessageConsumer implements Runnable {
                 }
             }
         } catch (ClassNotFoundException classNotFoundException) {
-            System.err.printf("Failed to deserialize log message, reason: %s%n", classNotFoundException.getMessage());
+            LOG.error("Failed to deserialize log message", classNotFoundException);
         } catch (EOFException e) {
-            System.err.println("Client closed the connection");
+            LOG.error("Client closed the connection: {} unexpectedly", client);
         } catch (SocketException e) {
-            System.err.printf("SocketException: Possible client forceful termination or network issue, reason: %s%n",
-                    e.getMessage());
+            LOG.error("SocketException: Possible client forceful termination or network issue", e);
         } catch (IOException ioException) {
-            System.err.printf("Something went wrong during receiving the log message or deserializing it, reason: %s%n",
-                    ioException.getMessage());
+            LOG.error("Something went wrong during receiving the log message or deserializing it", ioException);
         } finally {
             if (!client.isClosed()) {
                 // Try to close socket gracefully
                 try {
                     client.close();
                 } catch (Exception exception) {
-                    System.err.printf("Failed to close client socket: %s, reason: %s",
-                            client,
-                            exception.getMessage());
+                    LOG.error(String.format("Failed to close client socket: %s", client), exception);
                 }
             }
-            System.out.printf("Connection closed for: %s%n", client);
+            LOG.info("Connection closed for: {}", client);
         }
     }
 

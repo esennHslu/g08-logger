@@ -3,11 +3,14 @@ package ch.hslu.vsk.logger.adapter;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 import ch.hslu.vsk.logger.server.LogStrategy;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The LogMessageAdapter class is responsible for saving log messages to a persistor using a strategy.
  */
 public class LogMessageAdapter {
+    private static final Logger LOG = LoggerFactory.getLogger(LogMessageAdapter.class);
     private final StringPersistor stringPersistor;
     private final LogStrategy strategy;
 
@@ -31,9 +34,9 @@ public class LogMessageAdapter {
         try {
             var msg = this.strategy.format(messageDo);
             this.stringPersistor.save(messageDo.getCreatedAt(), msg);
-            System.out.println(msg);
+            LOG.debug(msg);
         } catch (Exception e) {
-            System.err.println("Error saving log message: " + e.getMessage());
+            LOG.error("Error saving log message");
         }
     }
 }
