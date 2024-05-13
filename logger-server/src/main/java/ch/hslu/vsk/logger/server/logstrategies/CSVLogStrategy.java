@@ -27,6 +27,7 @@ public final class CSVLogStrategy implements LogStrategy {
 
     /**
      * Escapes CSV characters in a string input.
+     * F.e. escapes a ',' in a string to '\,'.
      *
      * @param input the string to be escaped
      * @return an escaped CSV string

@@ -1,7 +1,7 @@
 package ch.hslu.vsk.logger.server;
 
 import ch.hslu.vsk.logger.adapter.LogMessageAdapter;
-import ch.hslu.vsk.logger.server.logstrategies.TextLogStrategy;
+import ch.hslu.vsk.logger.server.logstrategies.CompetitionStrategy;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
 import org.slf4j.Logger;
@@ -90,7 +90,7 @@ public final class LoggerServer {
      */
     public static void main(final String[] args) {
         ConfigReader configReader = new ConfigReader();
-        LogStrategy logStrategy = new TextLogStrategy();
+        LogStrategy logStrategy = new CompetitionStrategy();
         StringPersistor stringPersistor = new FileStringPersistor();
         stringPersistor.setFile(Path.of(configReader.getLogFilePath()));
         LogMessageAdapter logMessageAdapter = new LogMessageAdapter(stringPersistor, logStrategy);
