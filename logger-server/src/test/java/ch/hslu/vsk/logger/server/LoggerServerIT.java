@@ -2,7 +2,7 @@ package ch.hslu.vsk.logger.server;
 
 import ch.hslu.vsk.logger.api.LogLevel;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
-import ch.hslu.vsk.logger.server.logstrategies.TextLogStrategy;
+import ch.hslu.vsk.logger.server.logstrategies.CompetitionStrategy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.containers.GenericContainer;
@@ -83,12 +83,13 @@ final class LoggerServerIT {
     @Test
     void testClientsLogWillBePersistedInLogFile(@TempDir Path tempDir) {
         // Arrange
-        LogStrategy usedStrategy = new TextLogStrategy();
+        LogStrategy usedStrategy = new CompetitionStrategy();
         try (Socket connection = new Socket(server.getHost(), server.getFirstMappedPort());
              ObjectOutputStream stream = new ObjectOutputStream(connection.getOutputStream())) {
             Instant fixed = Instant.parse("2024-05-01T10:10:00.00Z");
             var message = new LogMessageDo.Builder("test message")
                     .at(fixed)
+                    .level(LogLevel.Info)
                     .from("test-client")
                     .build();
             String expectedLog = usedStrategy.format(message);
@@ -163,7 +164,10 @@ final class LoggerServerIT {
             String logs = retrieveLogFileFromContainer(tempDir);
             for (int i = 0; i < clientAmount; i++) {
                 for (int j = 0; j < logAmount; j++) {
-                    assertThat(logs).contains(String.format("client-%d: log-%d", i, j));
+                    // TODO use strategy independent checking if all logs made it to the file
+                    //      requires the extension of the LogStrategy interface in order to be able to deserialize
+                    //      the logs again
+                    assertThat(logs).contains(String.format("client-%d log-%d", i, j));
                 }
             }
         } catch (Exception e) {
