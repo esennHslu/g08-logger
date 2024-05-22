@@ -22,17 +22,11 @@ public final class ConfigReader {
         }
     }
 
-    public String getLogFilePath() {
-        return properties.getProperty("LOGFILE_PATH");
-    }
+    public String getLogFilePath() { return getEnvVariableOrConfig("LOG_FILE"); }
 
-    public Integer getSocketPort() {
-        return Integer.valueOf(properties.getProperty("SOCKET_PORT"));
-    }
+    public Integer getSocketPort() { return Integer.valueOf(getEnvVariableOrConfig("LISTEN_PORT")); }
 
-    public String getSocketAddress() {
-        return properties.getProperty("SOCKET_ADDRESS");
-    }
+    public String getSocketAddress() { return getEnvVariableOrConfig("SOCKET_ADDRESS"); }
 
     public String getCustomSetting(final String settingName) {
         if (properties.containsKey(settingName)) {
@@ -40,5 +34,13 @@ public final class ConfigReader {
         }
 
         throw new NoSuchElementException("Found no setting with name " + settingName);
+    }
+
+    private String getEnvVariableOrConfig(final String key) {
+        String value = System.getenv(key);
+        if (value != null) {
+            return value;
+        }
+        return properties.getProperty(key);
     }
 }
