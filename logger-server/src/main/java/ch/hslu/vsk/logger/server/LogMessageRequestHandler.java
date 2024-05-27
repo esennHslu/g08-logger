@@ -2,12 +2,14 @@ package ch.hslu.vsk.logger.server;
 
 import ch.hslu.vsk.logger.adapter.LogMessageAdapter;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
+import com.esotericsoftware.kryo.io.Input;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.time.Instant;
@@ -19,24 +21,30 @@ public final class LogMessageRequestHandler implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(LogMessageRequestHandler.class);
     private final Socket client;
     private final LogMessageAdapter logAdapter;
+    private final Kryo kryo;
 
     /**
      * Constructs a new {@link LogMessageRequestHandler} instance, while injecting its dependencies.
      *
      * @param client     Established socket connection to the client
      * @param logAdapter Adapter for persisting received log messages
+     * @param kryo       Configured Kryo serialization client
      * @throws IllegalArgumentException if one of the arguments is {@code null}
      */
-    public LogMessageRequestHandler(final Socket client, final LogMessageAdapter logAdapter) {
+    public LogMessageRequestHandler(final Socket client, final LogMessageAdapter logAdapter, final Kryo kryo) {
         if (client == null) {
             throw new IllegalArgumentException("Provided client cannot be null");
         }
         if (logAdapter == null) {
             throw new IllegalArgumentException("Provided log adapter cannot be null");
         }
+        if (kryo == null) {
+            throw new IllegalArgumentException("Provided kryo cannot be null");
+        }
 
         this.client = client;
         this.logAdapter = logAdapter;
+        this.kryo = kryo;
     }
 
     /**
@@ -47,20 +55,18 @@ public final class LogMessageRequestHandler implements Runnable {
     @Override
     public void run() {
         LOG.info("Connected to: {}", client);
-        try (ObjectInputStream inputStream = new ObjectInputStream(client.getInputStream())) {
+        try (Input input = new Input(client.getInputStream())) {
             while (true) {
-                LogMessageDo messageDo = (LogMessageDo) inputStream.readObject();
+                LogMessageDo messageDo = kryo.readObject(input, LogMessageDo.class);
                 Instant receivedLogAt = Instant.now();
                 messageDo = registerProcessedAt(messageDo, receivedLogAt);
                 logAdapter.saveLogMessage(messageDo);
             }
-        } catch (ClassNotFoundException classNotFoundException) {
-            LOG.error("Failed to deserialize log message", classNotFoundException);
         } catch (EOFException e) {
             LOG.error("Client closed the connection");
         } catch (SocketException e) {
             LOG.error("SocketException: Possible client forceful termination or network issue", e);
-        } catch (IOException ioException) {
+        } catch (KryoException | IOException ioException) {
             LOG.error("Something went wrong during receiving the log message or deserializing it", ioException);
         } finally {
             if (!client.isClosed()) {

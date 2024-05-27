@@ -3,10 +3,12 @@ package ch.hslu.vsk.logger.component;
 import ch.hslu.vsk.logger.api.LogLevel;
 import ch.hslu.vsk.logger.api.Logger;
 import ch.hslu.vsk.logger.api.LoggerSetup;
+import ch.hslu.vsk.logger.common.KryoFactory;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.URI;
 import java.time.Instant;
@@ -33,7 +35,8 @@ import java.util.concurrent.TimeUnit;
 public class LoggerClient implements LoggerSetup {
     private LogLevel minLogLevel;
     private Socket socket;
-    private ObjectOutputStream outputStream;
+    private Output output;
+    private final Kryo kryo;
     private final URI targetServerAddress;
     private ScheduledFuture<?> reconnectFuture;
     private final String source;
@@ -47,9 +50,11 @@ public class LoggerClient implements LoggerSetup {
         this.source = builder.getSource();
         this.logCacher = new LogCacher(builder.getFallbackFile());
         this.targetServerAddress = builder.getTargetServerAddress();
+        kryo = KryoFactory.createConfiguredKryoInstance();
+
         try {
             this.socket = new Socket(targetServerAddress.getHost(), targetServerAddress.getPort());
-            this.outputStream = new ObjectOutputStream(socket.getOutputStream());
+            this.output = new Output(socket.getOutputStream());
             this.logCacher.sendCachedLogs(this::sendLog);
         } catch (IOException ioException) {
             this.tryToReconnect();
@@ -78,8 +83,8 @@ public class LoggerClient implements LoggerSetup {
         }
 
         try {
-            outputStream.writeObject(messageDo);
-            outputStream.flush();
+            kryo.writeObject(output, messageDo);
+            output.flush();
         } catch (Exception e) {
             this.tryToReconnect();
             this.logCacher.cache(messageDo);
@@ -93,7 +98,7 @@ public class LoggerClient implements LoggerSetup {
             this.reconnectFuture = this.scheduler.scheduleAtFixedRate(() -> {
                         try {
                             this.socket = new Socket(targetServerAddress.getHost(), targetServerAddress.getPort());
-                            this.outputStream = new ObjectOutputStream(socket.getOutputStream());
+                            this.output = new Output(socket.getOutputStream());
                             this.logCacher.sendCachedLogs(this::sendLog);
                             this.isReconnecting = false;
                             this.reconnectFuture.cancel(false);

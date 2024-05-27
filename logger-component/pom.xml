@@ -43,6 +43,10 @@
             <groupId>ch.hslu.vsk24fs</groupId>
             <artifactId>loggerinterface</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>

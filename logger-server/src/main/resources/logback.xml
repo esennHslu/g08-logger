@@ -5,7 +5,9 @@
         </encoder>
     </appender>
 
-    <root level="debug">
+    <logger name="ch.hslu.vsk.logger" level="debug"/>
+
+    <root level="info">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

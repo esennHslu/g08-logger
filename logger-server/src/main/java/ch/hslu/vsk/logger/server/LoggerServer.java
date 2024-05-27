@@ -1,9 +1,12 @@
 package ch.hslu.vsk.logger.server;
 
 import ch.hslu.vsk.logger.adapter.LogMessageAdapter;
+import ch.hslu.vsk.logger.common.KryoFactory;
 import ch.hslu.vsk.logger.server.logstrategies.CompetitionStrategy;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.util.Pool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,24 +29,32 @@ public final class LoggerServer {
     private static final Logger LOG = LoggerFactory.getLogger(LoggerServer.class);
     private final ConfigReader config;
     private final LogMessageAdapter logMessageAdapter;
+    private final Pool<Kryo> kryoPool;
 
     /**
      * Constructs a new {@code LoggerServer} instance while injecting and configuring its dependencies.
      *
      * @param config            Reader in order to resolve configuration properties
      * @param logMessageAdapter Adapter for persisting log messages
+     * @param kryoPool          Pool for obtaining {@link Kryo} instances
      * @throws IllegalArgumentException if one of the arguments is {@code null}
      */
-    public LoggerServer(final ConfigReader config, final LogMessageAdapter logMessageAdapter) {
+    public LoggerServer(final ConfigReader config,
+                        final LogMessageAdapter logMessageAdapter,
+                        final Pool<Kryo> kryoPool) {
         if (config == null) {
             throw new IllegalArgumentException("Provided config reader cannot be null");
         }
         if (logMessageAdapter == null) {
             throw new IllegalArgumentException("Provided log-message-adapter cannot be null");
         }
+        if (kryoPool == null) {
+            throw new IllegalArgumentException("Provided kryo pool cannot be null");
+        }
 
         this.config = config;
         this.logMessageAdapter = logMessageAdapter;
+        this.kryoPool = kryoPool;
     }
 
     /**
@@ -64,7 +75,8 @@ public final class LoggerServer {
 
             while (true) {
                 Socket client = listener.accept();
-                Runnable logConsumer = new LogMessageRequestHandler(client, logMessageAdapter);
+                Kryo kryo = kryoPool.obtain();
+                Runnable logConsumer = new LogMessageRequestHandler(client, logMessageAdapter, kryo);
                 virtualThreadExecutor.execute(logConsumer);
             }
         } catch (UnknownHostException unknownHostException) {
@@ -94,8 +106,14 @@ public final class LoggerServer {
         StringPersistor stringPersistor = new FileStringPersistor();
         stringPersistor.setFile(Path.of(configReader.getLogFilePath()));
         LogMessageAdapter logMessageAdapter = new LogMessageAdapter(stringPersistor, logStrategy);
+        Pool<Kryo> kryoPool = new Pool<>(false, true) {
+            @Override
+            protected Kryo create() {
+                return KryoFactory.createConfiguredKryoInstance();
+            }
+        };
 
-        LoggerServer server = new LoggerServer(configReader, logMessageAdapter);
+        LoggerServer server = new LoggerServer(configReader, logMessageAdapter, kryoPool);
         server.listen();
     }
 }

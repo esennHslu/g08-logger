@@ -3,8 +3,12 @@ package ch.hslu.vsk.logger.server;
 import ch.hslu.vsk.logger.api.LogLevel;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 import ch.hslu.vsk.logger.server.logstrategies.CompetitionStrategy;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.util.DefaultInstantiatorStrategy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.objenesis.strategy.SerializingInstantiatorStrategy;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
@@ -13,7 +17,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -59,7 +62,7 @@ final class LoggerServerIT {
     void testClientCanSendLogToServer() {
         // Arrange
         try (Socket connection = new Socket(server.getHost(), server.getFirstMappedPort());
-             ObjectOutputStream stream = new ObjectOutputStream(connection.getOutputStream())) {
+             Output output = new Output(connection.getOutputStream())) {
             var message = new LogMessageDo.Builder("test message")
                     .at(Instant.now())
                     .level(LogLevel.Info)
@@ -68,8 +71,9 @@ final class LoggerServerIT {
             String expectedLog = message.toString();
 
             // Act
-            stream.writeObject(message);
-            stream.flush();
+            Kryo kryo = createKryo();
+            kryo.writeObject(output, message);
+            output.flush();
             Thread.sleep(50); // grace period in order to allow server to process request
 
             // Assert
@@ -85,7 +89,7 @@ final class LoggerServerIT {
         // Arrange
         LogStrategy usedStrategy = new CompetitionStrategy();
         try (Socket connection = new Socket(server.getHost(), server.getFirstMappedPort());
-             ObjectOutputStream stream = new ObjectOutputStream(connection.getOutputStream())) {
+             Output output = new Output(connection.getOutputStream())) {
             Instant fixed = Instant.parse("2024-05-01T10:10:00.00Z");
             var message = new LogMessageDo.Builder("test message")
                     .at(fixed)
@@ -95,8 +99,9 @@ final class LoggerServerIT {
             String expectedLog = usedStrategy.format(message);
 
             // Act
-            stream.writeObject(message);
-            stream.flush();
+            Kryo kryo = createKryo();
+            kryo.writeObject(output, message);
+            output.flush();
             Thread.sleep(100); // grace period in order to allow server to persist log
 
             // Assert
@@ -116,6 +121,7 @@ final class LoggerServerIT {
             // Act
             Thread.sleep(50); // slight delay to prevent hiccup
             connection.close();
+            Thread.sleep(50); // grace period for io-channel close etc.
 
             // Assert
             String logs = server.getLogs();
@@ -137,9 +143,11 @@ final class LoggerServerIT {
             for (int i = 0; i < clientAmount; i++) {
                 int clientNo = i;
                 executor.execute(() -> {
+                    Kryo kryo = createKryo(); // create own instance for each thread
+
                     try (
                             Socket connection = new Socket(server.getHost(), server.getFirstMappedPort());
-                            ObjectOutputStream stream = new ObjectOutputStream(connection.getOutputStream())) {
+                            Output output = new Output(connection.getOutputStream())) {
                         for (int j = 0; j < logAmount; j++) {
                             var message = new LogMessageDo.Builder(String.format("log-%d", j))
                                     .from(String.format("client-%d", clientNo))
@@ -147,8 +155,8 @@ final class LoggerServerIT {
                                     .level(LogLevel.Info)
                                     .build();
 
-                            stream.writeObject(message);
-                            stream.flush();
+                            kryo.writeObject(output, message);
+                            output.flush();
                             logSentCountdown.countDown();
                             Thread.sleep(50);
                         }
@@ -179,5 +187,14 @@ final class LoggerServerIT {
         Path localLogFile = Path.of(targetDir.toString(), "Logger.log");
         server.copyFileFromContainer("/app/Logs/Logger.log", localLogFile.toString());
         return Files.readString(localLogFile, StandardCharsets.UTF_8);
+    }
+
+    private Kryo createKryo() {
+        var kryo = new Kryo();
+        kryo.setInstantiatorStrategy(new DefaultInstantiatorStrategy(new SerializingInstantiatorStrategy()));
+        kryo.register(Instant.class, 1);
+        kryo.register(LogLevel.class, 2);
+        kryo.register(LogMessageDo.class, 3);
+        return kryo;
     }
 }
