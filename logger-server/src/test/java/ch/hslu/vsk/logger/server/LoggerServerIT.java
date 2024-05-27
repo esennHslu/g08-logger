@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.objenesis.strategy.SerializingInstantiatorStrategy;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.output.OutputFrame;
+import org.testcontainers.containers.output.WaitingConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
@@ -25,6 +27,7 @@ import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -117,15 +120,15 @@ final class LoggerServerIT {
         try {
             // Arrange
             Socket connection = new Socket(server.getHost(), server.getFirstMappedPort());
+            WaitingConsumer consumer = new WaitingConsumer();
+            server.followOutput(consumer, OutputFrame.OutputType.STDOUT);
 
             // Act
             Thread.sleep(50); // slight delay to prevent hiccup
             connection.close();
-            Thread.sleep(50); // grace period for io-channel close etc.
 
             // Assert
-            String logs = server.getLogs();
-            assertThat(logs).contains("Connection closed");
+            consumer.waitUntil(frame -> frame.getUtf8String().contains("Connection closed"), 5, TimeUnit.SECONDS);
             assertThat(server.isRunning()).isTrue();
         } catch (Exception e) {
             fail(e);
