@@ -2,6 +2,7 @@ package ch.hslu.vsk.logger.common.dataobject;
 
 import ch.hslu.vsk.logger.api.LogLevel;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
