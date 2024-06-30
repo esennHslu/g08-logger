@@ -34,6 +34,15 @@
     <properties>
         <jar.start.class>ch.hslu.vsk.logger.server.LoggerServer</jar.start.class>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>jboss-public-repository-group</id>
+            <name>JBoss Public Repository Group</name>
+            <url>https://repository.jboss.org/nexus/content/groups/public/</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>ch.hslu.vsk24fs.g08</groupId>
@@ -89,6 +98,11 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.2</version>
         </dependency>
         <dependency>
             <groupId>com.esotericsoftware</groupId>
@@ -347,7 +361,7 @@
                             <finalName>${project.artifactId}</finalName>
                             <transformers>
                                 <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${jar.start.class}</mainClass>
                                 </transformer>
                             </transformers>

@@ -22,11 +22,21 @@ public final class ConfigReader {
         }
     }
 
-    public String getLogFilePath() { return getEnvVariableOrConfig("LOG_FILE"); }
+    public String getLogFilePath() {
+        return getEnvVariableOrConfig("LOG_FILE");
+    }
 
-    public Integer getSocketPort() { return Integer.valueOf(getEnvVariableOrConfig("LISTEN_PORT")); }
+    public Integer getSocketPort() {
+        return Integer.valueOf(getEnvVariableOrConfig("LISTEN_PORT"));
+    }
 
-    public String getSocketAddress() { return getEnvVariableOrConfig("SOCKET_ADDRESS"); }
+    public Integer getLoggerViewerSocketPort() {
+        return Integer.valueOf(getEnvVariableOrConfig("LOGGER_VIEWER_LISTEN_PORT"));
+    }
+
+    public String getSocketAddress() {
+        return getEnvVariableOrConfig("SOCKET_ADDRESS");
+    }
 
     public String getCustomSetting(final String settingName) {
         if (properties.containsKey(settingName)) {
