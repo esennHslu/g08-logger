@@ -1,7 +1,9 @@
 package ch.hslu.vsk.logger.server;
 
-import ch.hslu.vsk.logger.adapter.LogMessageAdapter;
 import ch.hslu.vsk.logger.common.KryoFactory;
+import ch.hslu.vsk.logger.server.adapter.FileStringPersistorLogAdapter;
+import ch.hslu.vsk.logger.server.adapter.LogAdapter;
+import ch.hslu.vsk.logger.server.adapter.LoggerViewerLogAdapter;
 import ch.hslu.vsk.logger.server.logstrategies.CompetitionStrategy;
 import ch.hslu.vsk.stringpersistor.FileStringPersistor;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
@@ -16,6 +18,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,32 +32,41 @@ import java.util.concurrent.Executors;
 public final class LoggerServer {
     private static final Logger LOG = LoggerFactory.getLogger(LoggerServer.class);
     private final ConfigReader config;
-    private final LogMessageAdapter logMessageAdapter;
+    private final List<LogAdapter> logAdapters;
+    private final LogWebSocketServer logWebSocketServer;
+    private ServerSocket listener;
+    private ExecutorService virtualThreadExecutor;
     private final Pool<Kryo> kryoPool;
 
     /**
      * Constructs a new {@code LoggerServer} instance while injecting and configuring its dependencies.
      *
-     * @param config            Reader in order to resolve configuration properties
-     * @param logMessageAdapter Adapter for persisting log messages
-     * @param kryoPool          Pool for obtaining {@link Kryo} instances
+     * @param config             Reader in order to resolve configuration properties.
+     * @param logAdapters        Collection of adapters used to handle incoming log messages
+     * @param logWebSocketServer Server instance used to broadcast incoming log messages to all subscribed viewers
+     * @param kryoPool           Pool for obtaining {@link Kryo} instances
      * @throws IllegalArgumentException if one of the arguments is {@code null}
      */
     public LoggerServer(final ConfigReader config,
-                        final LogMessageAdapter logMessageAdapter,
+                        final List<LogAdapter> logAdapters,
+                        final LogWebSocketServer logWebSocketServer,
                         final Pool<Kryo> kryoPool) {
         if (config == null) {
             throw new IllegalArgumentException("Provided config reader cannot be null");
         }
-        if (logMessageAdapter == null) {
-            throw new IllegalArgumentException("Provided log-message-adapter cannot be null");
+        if (logAdapters == null) {
+            throw new IllegalArgumentException("Provided log adapters cannot be null");
+        }
+        if (logWebSocketServer == null) {
+            throw new IllegalArgumentException("Provided logWebSocketServer cannot be null");
         }
         if (kryoPool == null) {
             throw new IllegalArgumentException("Provided kryo pool cannot be null");
         }
 
         this.config = config;
-        this.logMessageAdapter = logMessageAdapter;
+        this.logAdapters = logAdapters;
+        this.logWebSocketServer = logWebSocketServer;
         this.kryoPool = kryoPool;
     }
 
@@ -66,9 +79,12 @@ public final class LoggerServer {
      */
     @SuppressWarnings("InfiniteLoopStatement")
     public void listen() {
-        try (ServerSocket listener = new ServerSocket(config.getSocketPort(), 0,
-                InetAddress.getByName(config.getSocketAddress()));
-             ExecutorService virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+        try {
+            logWebSocketServer.startServer();
+            listener = new ServerSocket(config.getSocketPort(), 0,
+                    InetAddress.getByName(config.getSocketAddress()));
+            virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
             LOG.info("Server started, listening on {}:{} for connections...",
                     config.getSocketAddress(),
                     config.getSocketPort());
@@ -76,7 +92,7 @@ public final class LoggerServer {
             while (true) {
                 Socket client = listener.accept();
                 Kryo kryo = kryoPool.obtain();
-                Runnable logConsumer = new LogMessageRequestHandler(client, logMessageAdapter, kryo);
+                Runnable logConsumer = new LogMessageRequestHandler(client, logAdapters, kryo);
                 virtualThreadExecutor.execute(logConsumer);
             }
         } catch (UnknownHostException unknownHostException) {
@@ -95,6 +111,24 @@ public final class LoggerServer {
     }
 
     /**
+     * Stops the server and releases resources.
+     */
+    public void stop() {
+        try {
+            if (listener != null && !listener.isClosed()) {
+                listener.close();
+            }
+            if (virtualThreadExecutor != null && !virtualThreadExecutor.isShutdown()) {
+                virtualThreadExecutor.shutdown();
+            }
+            logWebSocketServer.stopServer();
+            LOG.info("Server stopped");
+        } catch (IOException e) {
+            LOG.error("Error stopping the server", e);
+        }
+    }
+
+    /**
      * The entry point for the server application.
      * Creates an instance of {@code LoggerServer} and starts it.
      *
@@ -105,15 +139,20 @@ public final class LoggerServer {
         LogStrategy logStrategy = new CompetitionStrategy();
         StringPersistor stringPersistor = new FileStringPersistor();
         stringPersistor.setFile(Path.of(configReader.getLogFilePath()));
-        LogMessageAdapter logMessageAdapter = new LogMessageAdapter(stringPersistor, logStrategy);
+        LogWebSocketServer logWebSocketServer = new LogWebSocketServer(configReader.getLoggerViewerSocketPort());
+        FileStringPersistorLogAdapter fileStringPersistorLogAdapter = new FileStringPersistorLogAdapter(stringPersistor, logStrategy);
+        LoggerViewerLogAdapter loggerViewerLogAdapter = new LoggerViewerLogAdapter(logStrategy, logWebSocketServer);
+        List<LogAdapter> adapters = Arrays.asList(fileStringPersistorLogAdapter, loggerViewerLogAdapter);
         Pool<Kryo> kryoPool = new Pool<>(false, true) {
             @Override
             protected Kryo create() {
                 return KryoFactory.createConfiguredKryoInstance();
             }
         };
+        LoggerServer server = new LoggerServer(configReader, adapters, logWebSocketServer, kryoPool);
 
-        LoggerServer server = new LoggerServer(configReader, logMessageAdapter, kryoPool);
+        Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
+
         server.listen();
     }
 }

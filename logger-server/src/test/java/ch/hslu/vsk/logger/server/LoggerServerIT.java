@@ -29,6 +29,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import ch.hslu.vsk.logger.api.LogLevel;
+import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
+import ch.hslu.vsk.logger.server.logstrategies.CompetitionStrategy;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 

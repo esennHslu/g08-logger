@@ -1,7 +1,7 @@
 package ch.hslu.vsk.logger.server;
 
-import ch.hslu.vsk.logger.adapter.LogMessageAdapter;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
+import ch.hslu.vsk.logger.server.adapter.LogAdapter;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Input;
@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Dedicated runnable for consuming all log messages sent by one client (one socket connection) and persisting them.
@@ -20,30 +21,30 @@ import java.time.Instant;
 public final class LogMessageRequestHandler implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(LogMessageRequestHandler.class);
     private final Socket client;
-    private final LogMessageAdapter logAdapter;
+    private final List<LogAdapter> logAdapters;
     private final Kryo kryo;
 
     /**
      * Constructs a new {@link LogMessageRequestHandler} instance, while injecting its dependencies.
      *
-     * @param client     Established socket connection to the client
-     * @param logAdapter Adapter for persisting received log messages
-     * @param kryo       Configured Kryo serialization client
+     * @param client      Established socket connection to the client
+     * @param logAdapters Adapter for persisting received log messages
+     * @param kryo        Configured Kryo serialization client
      * @throws IllegalArgumentException if one of the arguments is {@code null}
      */
-    public LogMessageRequestHandler(final Socket client, final LogMessageAdapter logAdapter, final Kryo kryo) {
+    public LogMessageRequestHandler(final Socket client, final List<LogAdapter> logAdapters, final Kryo kryo) {
         if (client == null) {
             throw new IllegalArgumentException("Provided client cannot be null");
         }
-        if (logAdapter == null) {
-            throw new IllegalArgumentException("Provided log adapter cannot be null");
+        if (logAdapters == null) {
+            throw new IllegalArgumentException("Provided logAdapters cannot be null");
         }
         if (kryo == null) {
             throw new IllegalArgumentException("Provided kryo cannot be null");
         }
 
         this.client = client;
-        this.logAdapter = logAdapter;
+        this.logAdapters = logAdapters;
         this.kryo = kryo;
     }
 
@@ -60,7 +61,10 @@ public final class LogMessageRequestHandler implements Runnable {
                 LogMessageDo messageDo = kryo.readObject(input, LogMessageDo.class);
                 Instant receivedLogAt = Instant.now();
                 messageDo = registerProcessedAt(messageDo, receivedLogAt);
-                logAdapter.saveLogMessage(messageDo);
+
+                for (LogAdapter logAdapter : logAdapters) {
+                    logAdapter.saveLogMessage(messageDo);
+                }
             }
         } catch (EOFException e) {
             LOG.error("Client closed the connection");

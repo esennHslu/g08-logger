@@ -3,6 +3,7 @@ package ch.hslu.vsk.logger.adapter;
 import ch.hslu.vsk.logger.api.LogLevel;
 import ch.hslu.vsk.logger.common.dataobject.LogMessageDo;
 import ch.hslu.vsk.logger.server.LogStrategy;
+import ch.hslu.vsk.logger.server.adapter.FileStringPersistorLogAdapter;
 import ch.hslu.vsk.stringpersistor.api.StringPersistor;
 import org.junit.jupiter.api.Test;
 
@@ -15,12 +16,13 @@ import static org.mockito.Mockito.*;
 /**
  * @author esenn
  */
-public class LogMessageAdapterTest {
+public class FileStringPersistorLogAdapterTest {
     @Test
     public void testSaveLogMessage() {
         StringPersistor mockPersistor = mock(StringPersistor.class);
         LogStrategy mockStrategy = mock(LogStrategy.class);
-        LogMessageAdapter adapter = new LogMessageAdapter(mockPersistor, mockStrategy);
+
+        FileStringPersistorLogAdapter adapter = new FileStringPersistorLogAdapter(mockPersistor, mockStrategy);
         Instant createdInstant = Instant.parse("2007-12-03T10:15:30Z");
         Instant processedInstant = Instant.parse("2007-12-03T10:20:30Z");
         LogMessageDo messageDo = new LogMessageDo.Builder("test")
@@ -45,7 +47,7 @@ public class LogMessageAdapterTest {
     public void testDifferentLogLevels() {
         StringPersistor mockPersistor = mock(StringPersistor.class);
         LogStrategy mockStrategy = mock(LogStrategy.class);
-        LogMessageAdapter adapter = new LogMessageAdapter(mockPersistor, mockStrategy);
+        FileStringPersistorLogAdapter adapter = new FileStringPersistorLogAdapter(mockPersistor, mockStrategy);
         Instant createdInstant = Instant.parse("2007-12-03T10:15:30Z");
         Instant processedInstant = Instant.parse("2007-12-03T10:20:30Z");
         LogLevel[] levels = LogLevel.values();
@@ -67,7 +69,7 @@ public class LogMessageAdapterTest {
     public void testEmptyMessage() {
         StringPersistor mockPersistor = mock(StringPersistor.class);
         LogStrategy mockStrategy = mock(LogStrategy.class);
-        LogMessageAdapter adapter = new LogMessageAdapter(mockPersistor, mockStrategy);
+        FileStringPersistorLogAdapter adapter = new FileStringPersistorLogAdapter(mockPersistor, mockStrategy);
         Instant createdInstant = Instant.parse("2007-12-03T10:15:30Z");
         Instant processedInstant = Instant.parse("2007-12-03T10:20:30Z");
         LogMessageDo emptyMessageDo = new LogMessageDo.Builder("")
@@ -86,7 +88,7 @@ public class LogMessageAdapterTest {
     public void testExceptionHandlingInSaveMethod() {
         StringPersistor mockPersistor = mock(StringPersistor.class);
         LogStrategy mockStrategy = mock(LogStrategy.class);
-        LogMessageAdapter adapter = new LogMessageAdapter(mockPersistor, mockStrategy);
+        FileStringPersistorLogAdapter adapter = new FileStringPersistorLogAdapter(mockPersistor, mockStrategy);
         Instant fixedInstant = Instant.parse("2007-12-03T10:15:30Z");
 
         LogMessageDo messageDo = new LogMessageDo.Builder("test")
